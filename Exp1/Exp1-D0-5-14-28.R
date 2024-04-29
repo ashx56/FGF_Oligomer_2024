@@ -1,12 +1,3 @@
----
-title: "Exp1-D0-5-14-28"
-author: Ashish Phal
-output:
-  github_document:
-    html_preview: false
----
-
-```{r }
 # Setup and load packages
 suppressPackageStartupMessages({ 
   library(Matrix)
@@ -24,9 +15,7 @@ suppressPackageStartupMessages({
   # Set a seed to make umap and other non-deterministic steps consistent
   set.seed(seed = 42)
 })
-```
 
-```{r }
 # Load raw counts, cell/gene metadata
 counts <- readMM("data/raw/raw_counts.mtx")
 genes <- read.csv("data/raw/genes.tsv", header = F)
@@ -42,58 +31,40 @@ seurat_FGF <- CreateSeuratObject(counts = counts,
                                  meta.data = mdata)
 
 seurat_FGF
-```
 
-```{r }
 # View metadata
 seurat_FGF@meta.data
-```
 
-*QUALITY CONTROL*
-
-Mitochondrial gene detection
-
-```{r }
+# QUALITY CONTROL
+# Mitochondrial gene detection
 # "MT-" genes sequenced from mitochondrial genome 
 mito_genes <- rownames(seurat_FGF)[grep("^MT-", rownames(seurat_FGF))]
 mito_genes
-```
 
-```{r }
 # Percentage of reads per cell mapping to mitochondrial genes
 # <10% usually considered a good threshold
 seurat_FGF <- PercentageFeatureSet(seurat_FGF, 
                                    "^MT-", 
                                    col.name = "percent_mito")
 head(seurat_FGF@meta.data)
-```
 
-Ribosomal gene detection
-
-```{r }
+# Ribosomal gene detection
 # "RP.." genes mapping to ribosomal proteins
 ribo_genes <- rownames(seurat_FGF)[grep("^RP[SL]", rownames(seurat_FGF))]
 head(ribo_genes)
-```
 
-```{r }
 # Percentage of reads per cell mapping to ribosomal genes
 # <1% usually considered a good threshold
 seurat_FGF <- PercentageFeatureSet(seurat_FGF, 
                                    "^RP[SL]", 
                                    col.name = "percent_ribo")
 head(seurat_FGF@meta.data)
-```
 
-Red blood cell contamination
-
-```{r }
+#Red blood cell contamination
 # Red blood cell genes annotated "HB.." indicating RBC contamination
 hb_genes <- rownames(seurat_FGF)[grep("^HB[^(P)]", rownames(seurat_FGF))]
 hb_genes
-```
 
-```{r }
 # Percentage of reads per cell mapping to RBC genes
 # <0.5% usually considered a good threshold
 # This should really be 0, check raw data again if %s are high
@@ -101,11 +72,8 @@ seurat_FGF <- PercentageFeatureSet(seurat_FGF,
                                    "^HB[^(P)]", 
                                    col.name = "percent_hb")
 head(seurat_FGF@meta.data)
-```
 
-Plot QC metrics
-
-```{r fig.height = 10, fig.width = 15, fig.align = "center"}
+# Plot QC metrics
 Idents(seurat_FGF) <- "Day"
 feats <- c("nFeature_RNA", "nCount_RNA", "percent_mito", "percent_ribo", "percent_hb")
 plot <- VlnPlot(seurat_FGF, 
@@ -115,11 +83,9 @@ plot <- VlnPlot(seurat_FGF,
   NoLegend()
 
 plot
-```
 
-Subset Seurat object based on calculated QC metrics Quantile based thresholding for QC metrics
-
-```{r }
+# Subset Seurat object based on calculated QC metrics 
+# Quantile based thresholding for QC metrics
 # Subset Seurat object to include cells within 95% percentile of QC metrics
 vars_to_filter <- c("nFeature_RNA", "nCount_RNA", "percent_mito", "percent_ribo", "percent_hb")
 
@@ -133,11 +99,8 @@ for (var in vars_to_filter) {
 }
 seurat_FGF <- subset(seurat_FGF, subset = pass_filter)
 seurat_FGF
-```
 
-Expression-based filtering
-
-```{r }
+# Expression-based filtering
 # Remove cells expressing <200 genes
 selected_c <- WhichCells(seurat_FGF, expression = nFeature_RNA > 200)
 # Remove genes expressed in <3 cells
@@ -154,11 +117,8 @@ seurat_FGF <- subset(seurat_FGF,
                      cells = selected_c)
 
 seurat_FGF
-```
 
-Revisualize QC metrics
-
-```{r fig.height = 10, fig.width = 15, fig.align = "center"}
+# Revisualize QC metrics
 Idents(seurat_FGF) <- "Day"
 feats <- c("nFeature_RNA", "nCount_RNA", "percent_mito", "percent_ribo", "percent_hb")
 plot <- VlnPlot(seurat_FGF, 
@@ -168,11 +128,8 @@ plot <- VlnPlot(seurat_FGF,
   NoLegend()
 
 plot
-```
 
-Correlation between recovered UMIs per cell and detected genes
-
-```{r }
+# Correlation between recovered UMIs per cell and detected genes
 plot <- FeatureScatter(seurat_FGF, 
                "nCount_RNA", 
                "nFeature_RNA", 
@@ -180,11 +137,8 @@ plot <- FeatureScatter(seurat_FGF,
   ggplot2::theme_classic()
 
 plot
-```
 
-Cell-cycle scoring
-
-```{r }
+# Cell-cycle scoring
 seurat_FGF = NormalizeData(seurat_FGF, verbose = T)
 
 # Percentage of counts mapping to G2M/S phase genes
@@ -192,19 +146,13 @@ seurat_FGF <- CellCycleScoring(object = seurat_FGF,
                              g2m.features = cc.genes$g2m.genes,
                              s.features = cc.genes$s.genes)
 head(seurat_FGF@meta.data)
-```
-
-```{r fig.height=5, fig.width=10}
 plot <- VlnPlot(seurat_FGF, 
         features = c("S.Score", "G2M.Score"),
         ncol = 2, pt.size = 0)
 
 plot
-```
 
-Convert to monocle3 CDS for further processing
-
-```{r }
+# Convert to monocle3 CDS for further processing
 # Extract gene metadata and format for monocle3 cds
 gene_mdata <- as.data.frame(rownames(seurat_FGF))
 colnames(gene_mdata) <- "gene_short_name"
@@ -215,11 +163,8 @@ cds_FGF <- new_cell_data_set(expression_data = seurat_FGF[["RNA"]]$counts,
                              cell_metadata = seurat_FGF@meta.data,
                              gene_metadata = gene_mdata)
 cds_FGF
-```
 
-*DATA PROCESSING*
-
-```{r}
+# DATA PROCESSING
 # Size factor estimation and normalization/scaling
 cds_FGF <- estimate_size_factors(cds_FGF) 
 cds_FGF <- preprocess_cds(cds_FGF, verbose = T)
@@ -244,20 +189,15 @@ plot <- plot_cells(cds_FGF,
   scale_color_viridis_d()
 
 plot
-```
 
-```{r }
 # Visualize expression of a few canonical cell type markers to determine cell identities
 # iPSCs, Endothelial, Perivascular
 plot_cells(cds_FGF,
            genes = c("SOX2", "PECAM1", "PDGFRB", "TTN"),
            label_cell_groups = F,
            cell_size = 0.75)
-```
 
-Cell type annotations
-
-```{r}
+# Cell type annotations
 colData(cds_FGF)$cluster <- monocle3::clusters(cds_FGF)
 plot_cells(cds_FGF)
 
@@ -271,11 +211,8 @@ colData(cds_FGF)$cell_type <- dplyr::case_match(colData(cds_FGF)$cluster,
 plot_cells(cds_FGF, 
            color_cells_by = "cell_type",
            cell_size = 0.25) 
-```
 
-Cell type marker heatmap
-
-```{r fig.height=6, fig.width=10}
+# Cell type marker heatmap
 # Create list of markers for each annotated cell type
 manual_markers_by_cluster <- list(
   iPSC = c("POU5F1", "SOX2", "MYC", "NANOG", "POU2F1", "DNMT3B", "LIN28A", "PRDM14", "SALL4"),
@@ -312,4 +249,3 @@ pheatmap::pheatmap(agg_expr,
          cluster_cols = F,
          show_rownames = TRUE,
          show_colnames = TRUE)
-```
