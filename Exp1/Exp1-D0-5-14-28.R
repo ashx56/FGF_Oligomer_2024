@@ -17,14 +17,14 @@ suppressPackageStartupMessages({
 })
 
 # Load raw counts, cell/gene metadata
-counts <- readMM("data/raw/raw_counts.mtx")
-genes <- read.csv("data/raw/genes.tsv", header = F)
-barcodes <- read.csv("data/raw/barcodes.tsv", header = F)
+counts <- readMM("Exp1_raw_counts.mtx") # Raw counts file from GEO
+genes <- read.csv("data/genes.tsv", header = F)
+barcodes <- read.csv("data/barcodes.tsv", header = F)
 
 rownames(counts) <- genes[, 1]
 colnames(counts) <- barcodes[, 1]
 
-mdata <- read.csv("data/raw/cell_metadata.csv", row.names = 1)
+mdata <- read.csv("data/cell_metadata.csv", row.names = 1)
 
 # Create Seurat object
 seurat_FGF <- CreateSeuratObject(counts = counts,
@@ -107,7 +107,7 @@ selected_c <- WhichCells(seurat_FGF, expression = nFeature_RNA > 200)
 selected_f <- rownames(seurat_FGF)[Matrix::rowSums(seurat_FGF@assays$RNA$counts) > 3]
 
 # Filter genes to only include protein coding only
-df_gene <- readRDS("data/raw/df_gene.RDS") # Type annotations for each sequenced gene
+df_gene <- readRDS("data/df_gene.RDS") # Type annotations for each sequenced gene
 genes_coding <- df_gene %>%
   dplyr::filter(gene_type == "protein_coding") %>%
   dplyr::select(gene_short_name)
