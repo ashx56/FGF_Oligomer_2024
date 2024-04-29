@@ -302,7 +302,7 @@ agg_expr <- agg_expr[row_order,]
 annotation_df <- data.frame(Cluster = factor(column_order, levels = column_order))
 rownames(annotation_df) <- column_order
 
-# Plot heatmap
+# Plot heatmap (Supp Fig 36B)
 # Expression values are scaled across rows aka genes
 pheatmap::pheatmap(agg_expr,
          annotation_col = annotation_df,
