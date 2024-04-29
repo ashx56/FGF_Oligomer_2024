@@ -8,9 +8,6 @@ suppressPackageStartupMessages({
   library(RColorBrewer)
   library(pheatmap)
   library(DESeq2)
-  library(EnhancedVolcano)
-  library(openxlsx)
-  library(HGNChelper)
   
   DelayedArray:::set_verbose_block_processing(TRUE)
   # Passing a higher value will make some computations faster but use more memory. 
@@ -21,14 +18,14 @@ suppressPackageStartupMessages({
 })
 
 # Load raw counts, cell metadata
-counts <- readMM("data/raw/raw_counts.mtx")
-genes <- read.csv("data/raw/genes.tsv", header = F)
-barcodes <- read.csv("data/raw/barcodes.tsv", header = F)
+counts <- readMM("data/Exp2_raw_counts.mtx") # Raw counts from GEO
+genes <- read.csv("data/genes.tsv", header = F)
+barcodes <- read.csv("data/barcodes.tsv", header = F)
 
 rownames(counts) <- genes[, 1]
 colnames(counts) <- barcodes[, 1]
 
-mdata <- read.csv("data/raw/cell_metadata.csv", row.names = 1)
+mdata <- read.csv("data/cell_metadata.csv", row.names = 1)
 
 # Create Seurat object
 seurat_FGF <- CreateSeuratObject(counts = counts,
@@ -107,7 +104,7 @@ seurat_FGF
 selected_c <- WhichCells(seurat_FGF, expression = nFeature_RNA > 200)
 selected_f <- rownames(seurat_FGF)[Matrix::rowSums(seurat_FGF@assays$RNA@layers$counts) > 3]
 
-df_gene <- readRDS("data/raw/df_gene.RDS")
+df_gene <- readRDS("data/df_gene.RDS")
 genes_coding <- df_gene %>%
   dplyr::filter(gene_type == "protein_coding") %>%
   dplyr::select(gene_short_name)
@@ -302,9 +299,9 @@ seurat_endo[["umap"]] <- CreateDimReducObject(embeddings = rotated_umap, key = "
 # Plot the rotated UMAP
 DimPlot(seurat_endo, reduction = "umap")
 
-# Process Artery-Vein bulkRNA data set (Ang et. al., Cell, 2022)
+# Process Artery-Vein bulkRNAseq data set (Ang et. al., Cell, 2022)
 # Read raw counts
-av_counts <- read.delim("data/raw/artery_vein_counts.txt", 
+av_counts <- read.delim("data/artery_vein_counts.txt", 
                         header = TRUE, sep = "\t", stringsAsFactors = FALSE)
 
 # Filter duplicate gene rows
@@ -314,7 +311,7 @@ av_counts <- av_counts %>%
   distinct(gene, .keep_all = T) 
 
 rownames(av_counts) <- av_counts$gene
-av_counts <- av_counts[,-c(7)]
+av_counts <- av_counts[,-c(7)] # Remove 'gene' column
 av_counts
 
 # Set up metadata column for DESeq2
