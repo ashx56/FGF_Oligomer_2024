@@ -1,6 +1,6 @@
 ## Description
 
-Here, we provide code to reproduce analyses from [Edman et. al. 2024](https://pubmed.ncbi.nlm.nih.gov/36993355/)
+Here, we provide scripts to reproduce analyses from [Edman et. al. 2024](https://pubmed.ncbi.nlm.nih.gov/36993355/)
 
 **Paper**: Modulation of FGF pathway signaling and vascular differentiation using designed oligomeric assemblies
 
