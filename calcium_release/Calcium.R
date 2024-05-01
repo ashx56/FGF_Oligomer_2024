@@ -25,6 +25,3 @@ summary_df %>%
   geom_ribbon(aes(x = Time, ymin = NORM_FL - SE_NORM, ymax = NORM_FL + SE_NORM), alpha = 0.2) +
   geom_line(aes(x = Time, y = NORM_FL), size = 1) +
   theme_linedraw()
-
-  
-            
