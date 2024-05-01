@@ -8,3 +8,7 @@ viridis==0.6.5
 pheatmap==1.0.12
 DESeq2==1.42.1
 readr==2.1.5
+flowCore==2.14.2
+flowAI==1.32.0
+openCyto==2.14.0
+ggcyto==1.30.2
