@@ -1,7 +1,7 @@
 ## Description
 
 **Oligomer Extension Script**<br>
-The Jupyter Notebook walks the User through the Oligomer Extension Script. <br>
+The Jupyter Notebook in this folder walks the User through the Oligomer Extension Script. <br>
 <br>
 **Tutorial Structures**<br>
 DHR71.pdb<br>
