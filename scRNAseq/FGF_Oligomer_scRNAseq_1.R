@@ -1,4 +1,3 @@
-# Setup and load packages
 suppressPackageStartupMessages({ 
   library(Matrix)
   library(Seurat)
@@ -6,7 +5,6 @@ suppressPackageStartupMessages({
   library(monocle3)
   library(RColorBrewer)
   library(viridis)
-  library(pheatmap)
   
   DelayedArray:::set_verbose_block_processing(TRUE)
   # Passing a higher value will make some computations faster but use more memory. 
@@ -16,15 +14,16 @@ suppressPackageStartupMessages({
   set.seed(seed = 42)
 })
 
+# Processed data files can be downloaded from Harvard Dataverse DOI: 
 # Load raw counts, cell/gene metadata
-counts <- readMM("Exp1_raw_counts.mtx") # Raw counts file from GEO
-genes <- read.csv("data/genes.tsv", header = F)
-barcodes <- read.csv("data/barcodes.tsv", header = F)
+counts <- readMM("FGF_Oligomer_scRNAseq_1_filtered_counts.mtx")
+genes <- read.csv("FGF_Oligomer_scRNAseq_1_genes.tsv", header = F)
+barcodes <- read.csv("FGF_Oligomer_scRNAseq_1_barcodes.tsv", header = F)
 
 rownames(counts) <- genes[, 1]
 colnames(counts) <- barcodes[, 1]
 
-mdata <- read.csv("data/cell_metadata.csv", row.names = 1)
+mdata <- read.csv("FGF_Oligomer_scRNAseq_1_metadata.csv", row.names = 1)
 
 # Create Seurat object
 seurat_FGF <- CreateSeuratObject(counts = counts,
@@ -32,10 +31,7 @@ seurat_FGF <- CreateSeuratObject(counts = counts,
 
 seurat_FGF
 
-# View metadata
-seurat_FGF@meta.data
-
-# QUALITY CONTROL
+# QC
 # Mitochondrial gene detection
 # "MT-" genes sequenced from mitochondrial genome 
 mito_genes <- rownames(seurat_FGF)[grep("^MT-", rownames(seurat_FGF))]
@@ -60,14 +56,13 @@ seurat_FGF <- PercentageFeatureSet(seurat_FGF,
                                    col.name = "percent_ribo")
 head(seurat_FGF@meta.data)
 
-#Red blood cell contamination
+# Red blood cell contamination
 # Red blood cell genes annotated "HB.." indicating RBC contamination
 hb_genes <- rownames(seurat_FGF)[grep("^HB[^(P)]", rownames(seurat_FGF))]
 hb_genes
 
 # Percentage of reads per cell mapping to RBC genes
 # <0.5% usually considered a good threshold
-# This should really be 0, check raw data again if %s are high
 seurat_FGF <- PercentageFeatureSet(seurat_FGF, 
                                    "^HB[^(P)]", 
                                    col.name = "percent_hb")
@@ -76,16 +71,12 @@ head(seurat_FGF@meta.data)
 # Plot QC metrics
 Idents(seurat_FGF) <- "Day"
 feats <- c("nFeature_RNA", "nCount_RNA", "percent_mito", "percent_ribo", "percent_hb")
-plot <- VlnPlot(seurat_FGF, 
-                 features = feats, 
-                 pt.size = 0, 
-                 ncol = 3) +
+VlnPlot(seurat_FGF, 
+                features = feats, 
+                pt.size = 0, 
+                ncol = 3) +
   NoLegend()
 
-plot
-
-# Subset Seurat object based on calculated QC metrics 
-# Quantile based thresholding for QC metrics
 # Subset Seurat object to include cells within 95% percentile of QC metrics
 vars_to_filter <- c("nFeature_RNA", "nCount_RNA", "percent_mito", "percent_ribo", "percent_hb")
 
@@ -94,8 +85,8 @@ for (var in vars_to_filter) {
   lower_quantile <- quantile(seurat_FGF@meta.data[[var]], 0.05, na.rm = TRUE)
   upper_quantile <- quantile(seurat_FGF@meta.data[[var]], 0.95, na.rm = TRUE)
   seurat_FGF[['pass_filter']] <- seurat_FGF[['pass_filter']] & 
-                                 (seurat_FGF@meta.data[[var]] >= lower_quantile &
-                                  seurat_FGF@meta.data[[var]] <= upper_quantile)
+    (seurat_FGF@meta.data[[var]] >= lower_quantile &
+       seurat_FGF@meta.data[[var]] <= upper_quantile)
 }
 seurat_FGF <- subset(seurat_FGF, subset = pass_filter)
 seurat_FGF
@@ -106,8 +97,8 @@ selected_c <- WhichCells(seurat_FGF, expression = nFeature_RNA > 200)
 # Remove genes expressed in <3 cells
 selected_f <- rownames(seurat_FGF)[Matrix::rowSums(seurat_FGF@assays$RNA$counts) > 3]
 
-# Filter genes to only include protein coding only
-df_gene <- readRDS("data/df_gene.RDS") # Type annotations for each sequenced gene
+# Filter genes to include protein coding only
+df_gene <- readRDS("helper_files/df_gene.RDS")
 genes_coding <- df_gene %>%
   dplyr::filter(gene_type == "protein_coding") %>%
   dplyr::select(gene_short_name)
@@ -118,39 +109,24 @@ seurat_FGF <- subset(seurat_FGF,
 
 seurat_FGF
 
-# Revisualize QC metrics
-Idents(seurat_FGF) <- "Day"
-feats <- c("nFeature_RNA", "nCount_RNA", "percent_mito", "percent_ribo", "percent_hb")
-plot <- VlnPlot(seurat_FGF, 
-                 features = feats, 
-                 pt.size = 0, 
-                 ncol = 3) +
-  NoLegend()
-
-plot
-
 # Correlation between recovered UMIs per cell and detected genes
-plot <- FeatureScatter(seurat_FGF, 
-               "nCount_RNA", 
-               "nFeature_RNA", 
-               pt.size = 0.5) +
+FeatureScatter(seurat_FGF, 
+                       "nCount_RNA", 
+                       "nFeature_RNA", 
+                       pt.size = 0.5) +
   ggplot2::theme_classic()
-
-plot
 
 # Cell-cycle scoring
 seurat_FGF = NormalizeData(seurat_FGF, verbose = T)
 
 # Percentage of counts mapping to G2M/S phase genes
 seurat_FGF <- CellCycleScoring(object = seurat_FGF, 
-                             g2m.features = cc.genes$g2m.genes,
-                             s.features = cc.genes$s.genes)
-head(seurat_FGF@meta.data)
-plot <- VlnPlot(seurat_FGF, 
+                               g2m.features = cc.genes$g2m.genes,
+                               s.features = cc.genes$s.genes)
+
+VlnPlot(seurat_FGF, 
         features = c("S.Score", "G2M.Score"),
         ncol = 2, pt.size = 0)
-
-plot
 
 # Convert to monocle3 CDS for further processing
 # Extract gene metadata and format for monocle3 cds
@@ -164,7 +140,7 @@ cds_FGF <- new_cell_data_set(expression_data = seurat_FGF[["RNA"]]$counts,
                              gene_metadata = gene_mdata)
 cds_FGF
 
-# DATA PROCESSING
+# Data processing
 # Size factor estimation and normalization/scaling
 cds_FGF <- estimate_size_factors(cds_FGF) 
 cds_FGF <- preprocess_cds(cds_FGF, verbose = T)
@@ -182,25 +158,22 @@ cds_FGF <- reduce_dimension(cds_FGF, umap.min_dist = 0.25, verbose = T)
 cds_FGF <- cluster_cells(cds_FGF, k = 20, verbose = T)
 
 # Visualize UMAP by day of harvest (Fig 5A)
-plot <- plot_cells(cds_FGF, 
-           color_cells_by = "Day",
-           label_cell_groups = F,
-           cell_size = 0.5) +
+plot_cells(cds_FGF, 
+                   color_cells_by = "Day",
+                   label_cell_groups = F,
+                   cell_size = 0.5) +
   scale_color_viridis_d()
-
-plot
 
 # Visualize expression of a few canonical cell type markers to determine cell identities
 # iPSCs, Endothelial, Perivascular
 plot_cells(cds_FGF,
            genes = c("SOX2", "PECAM1", "PDGFRB", "TTN"),
-           label_cell_groups = F,
            cell_size = 0.75)
 
-# Cell type annotations
 colData(cds_FGF)$cluster <- monocle3::clusters(cds_FGF)
 plot_cells(cds_FGF)
 
+# Match clusters to cell types, clusters might differ between runs
 colData(cds_FGF)$cell_type <- dplyr::case_match(colData(cds_FGF)$cluster,
                                                 c("1","5", "14") ~ "D14 Perivascular",
                                                 c("2","8", "13") ~ "D14 Endothelial",
@@ -239,13 +212,13 @@ agg_expr <- agg_expr[row_order,]
 annotation_df <- data.frame(Cluster = factor(column_order, levels = column_order))
 rownames(annotation_df) <- column_order
 
-# Plot heatmap (Supp Fig 36B)
+# Plot heatmap (Fig S23B)
 # Expression values are scaled across rows aka genes
 pheatmap::pheatmap(agg_expr,
-         annotation_col = annotation_df,
-         color = brewer.pal(n = 9, name = "Greens"),  
-         scale = "row",
-         cluster_rows = F,
-         cluster_cols = F,
-         show_rownames = TRUE,
-         show_colnames = TRUE)
+                           annotation_col = annotation_df,
+                           color = brewer.pal(n = 9, name = "Greens"),  
+                           scale = "row",
+                           cluster_rows = F,
+                           cluster_cols = F,
+                           show_rownames = TRUE,
+                           show_colnames = TRUE)
