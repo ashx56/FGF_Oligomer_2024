@@ -14,11 +14,8 @@ suppressPackageStartupMessages({
   set.seed(seed = 42)
 })
 
-<<<<<<< HEAD
 # Processed data and metadata files can be downloaded from Harvard Dataverse DOI: 
-=======
 # Processed data files can be downloaded from Harvard Dataverse doi:10.7910/DVN/80RTTV
->>>>>>> da949169448e634f5467258e21ea8224b1e3f1a6
 # Load raw counts, cell/gene metadata
 counts <- readMM("FGF_Oligomer_scRNAseq_1_filtered_counts.mtx")
 genes <- read.csv("FGF_Oligomer_scRNAseq_1_genes.tsv", header = F)
